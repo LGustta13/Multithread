@@ -11,13 +11,18 @@ public class App {
         ExecutorService executor = null;
 
         try {
-            executor = Executors.newSingleThreadExecutor();
-            // executor.execute(new Tarefa()); // executa a tarefa/ thread
+            executor = Executors.newCachedThreadPool();
+            Future<String> f1 = executor.submit(new Tarefa());
+            Future<String> f2 = executor.submit(new Tarefa());
+            Future<String> f3 = executor.submit(new Tarefa());
 
-            Future<String> future = executor.submit(new Tarefa()); // executa tarefa porém com retorno
-            System.out.println(future.isDone()); // a tarefa finalizou?
-            System.out.println(future.get(1, TimeUnit.SECONDS)); // espera a tarefa finalizar, ou espera no máx x seg
-            System.out.println(future.isDone()); // a tarefa finalizou?
+            System.out.println(f1.get()); // espera a tarefa finalizar
+            System.out.println(f2.get()); // espera a tarefa finalizar
+            System.out.println(f3.get()); // espera a tarefa finalizar
+
+            executor.shutdown(); // Finaliza o executor
+
+            System.out.println(f1.isDone());
 
         } catch (Exception e) {
             throw e;
