@@ -8,17 +8,15 @@ public class App {
 
         // API do JAVA que trabalha com single ou multithread
         // Lembrar que há duas threads: a principal e a do executor
-        ExecutorService executor = Executors.newSingleThreadExecutor();
+        ExecutorService executor = null;
 
         try {
             executor = Executors.newSingleThreadExecutor();
             // executor.execute(new Tarefa()); // executa a tarefa/ thread
 
-            Future<?> future = executor.submit(new Tarefa()); // executa tarefa porém com retorno
+            Future<String> future = executor.submit(new Tarefa()); // executa tarefa porém com retorno
             System.out.println(future.isDone()); // a tarefa finalizou?
-            executor.shutdown(); // finaliza a tarefa
-            executor.awaitTermination(5, TimeUnit.SECONDS); // espera por um tempo antes de finalizar ou para terminar
-                                                            // com a última instrução
+            System.out.println(future.get(1, TimeUnit.SECONDS)); // espera a tarefa finalizar, ou espera no máx x seg
             System.out.println(future.isDone()); // a tarefa finalizou?
 
         } catch (Exception e) {
