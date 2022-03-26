@@ -1,27 +1,62 @@
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 public class App {
+
+    private static BlockingQueue<Double> resultado = new LinkedBlockingQueue<>();
+
     public static void main(String[] args) throws Exception {
 
         // API do JAVA que trabalha com single ou multithread
         // Lembrar que há duas threads: a principal e a do executor
-        // Neste caso serão utilizadas threads agendadas (3) para uma tarefa de 2
-        // segundos
-        ScheduledExecutorService executor = Executors.newScheduledThreadPool(3);
+        // Cyclic_Barrier: usado quando queremos que as threads esperem uma pela outra
+        // em um determinado ponto na tarefa. As threads chamam a barreira para esperar.
+        // ponto de sincronia entre múltiplas execuções, por fim uma tarefa é colocada
+        // como parâmetro para ser executada
 
-        // executor.schedule(new Tarefa(), 2, TimeUnit.SECONDS);
-        executor.scheduleAtFixedRate(new Tarefa(), 0, 2, TimeUnit.SECONDS); // Executa a tarefa instantaneamente(0) em
-                                                                            // um período de 2 segundos
-        executor.scheduleWithFixedDelay(new Tarefa(), 0, 2, TimeUnit.SECONDS); // Executa as tarefas com um delay entre
-                                                                               // a finalização de uma e começo de outra
-                                                                               // de 2 segundos
+        Runnable res = () -> {
+            double resultadoFinal = 0;
+            resultadoFinal += resultado.poll();
+            resultadoFinal += resultado.poll();
+            resultadoFinal += resultado.poll();
+            System.out.println("Resultado: " + resultadoFinal);
+        };
 
-        // PARA FUNCIONAR DEVE-SE COMENTAR O SHUTDOWN!!!
-        executor.shutdown(); // Finaliza o executor
+        CyclicBarrier ciclo = new CyclicBarrier(3, res);
+        ExecutorService executor = Executors.newFixedThreadPool(3);
+
+        Runnable r1 = () -> { // tarefa que pode ser executada por uma thread
+            resultado.add(432d * 3d);
+            await(ciclo); // espera pelas outras threads
+        };
+        Runnable r2 = () -> {
+            resultado.add(Math.pow(3d, 14d));
+            await(ciclo);
+        };
+        Runnable r3 = () -> {
+            resultado.add(45d * 127d / 12d);
+            await(ciclo);
+        };
+
+        executor.submit(r1);
+        executor.submit(r2);
+        executor.submit(r3);
+
+        executor.awaitTermination(200, TimeUnit.MILLISECONDS);
+
+        executor.shutdown();
+    }
+
+    public static void await(CyclicBarrier ciclo) {
+        try {
+            ciclo.await();
+        } catch (Exception e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     // O try catch é usado para ter certeza que o executor vai ser finalizado
