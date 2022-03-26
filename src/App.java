@@ -1,62 +1,56 @@
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.CyclicBarrier;
+import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 public class App {
 
-    private static BlockingQueue<Double> resultado = new LinkedBlockingQueue<>();
+    private static final Semaphore SEMAFORO1 = new Semaphore(10);
+    private static final Semaphore SEMAFORO2 = new Semaphore(3);
 
     public static void main(String[] args) throws Exception {
+        ExecutorService executor = Executors.newCachedThreadPool();
 
-        // API do JAVA que trabalha com single ou multithread
-        // Lembrar que há duas threads: a principal e a do executor
-        // Cyclic_Barrier: usado quando queremos que as threads esperem uma pela outra
-        // em um determinado ponto na tarefa. As threads chamam a barreira para esperar.
-        // ponto de sincronia entre múltiplas execuções, por fim uma tarefa é colocada
-        // como parâmetro para ser executada
+        Runnable r1 = () -> {
 
-        Runnable res = () -> {
-            double resultadoFinal = 0;
-            resultadoFinal += resultado.poll();
-            resultadoFinal += resultado.poll();
-            resultadoFinal += resultado.poll();
-            System.out.println("Resultado: " + resultadoFinal);
+            try {
+                SEMAFORO1.acquire();
+                System.out.println(new Random().nextInt(10000) + ", " + Thread.currentThread().getName());
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            } finally {
+                SEMAFORO1.release();
+            }
         };
 
-        CyclicBarrier ciclo = new CyclicBarrier(3, res);
-        ExecutorService executor = Executors.newFixedThreadPool(3);
-
-        Runnable r1 = () -> { // tarefa que pode ser executada por uma thread
-            resultado.add(432d * 3d);
-            await(ciclo); // espera pelas outras threads
-        };
         Runnable r2 = () -> {
-            resultado.add(Math.pow(3d, 14d));
-            await(ciclo);
-        };
-        Runnable r3 = () -> {
-            resultado.add(45d * 127d / 12d);
-            await(ciclo);
+
+            try {
+                boolean conseguiu = false;
+                while (!conseguiu) {
+                    conseguiu = SEMAFORO2.tryAcquire(1, TimeUnit.SECONDS);
+                }
+                System.out.println(new Random().nextInt(10000) + ", " + Thread.currentThread().getName());
+                Thread.sleep(2500);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                e.printStackTrace();
+            } finally {
+                SEMAFORO2.release();
+            }
         };
 
-        executor.submit(r1);
-        executor.submit(r2);
-        executor.submit(r3);
+        for (int i = 0; i < 500; i++) {
+            // executor.execute(r1);
+            executor.execute(r2);
 
-        executor.awaitTermination(200, TimeUnit.MILLISECONDS);
+        }
 
         executor.shutdown();
-    }
 
-    public static void await(CyclicBarrier ciclo) {
-        try {
-            ciclo.await();
-        } catch (Exception e) {
-            Thread.currentThread().interrupt();
-        }
     }
 
     // O try catch é usado para ter certeza que o executor vai ser finalizado
