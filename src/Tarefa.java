@@ -1,12 +1,16 @@
 import java.util.Random;
 import java.util.concurrent.Callable;
 
-public class Tarefa implements Callable<String> {
+public class Tarefa implements Runnable {
 
     // callabel seria tipo um runnable porém com retorno
-    public String call() throws Exception {
-        Thread.sleep(2000);
-        String name = Thread.currentThread().getName() + " " + new Random().nextInt(1000);
-        return name;
+    public void run() {
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        System.out.println(Thread.currentThread().getName() + " " + new Random().nextInt(1000));
     }
 }

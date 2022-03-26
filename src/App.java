@@ -1,6 +1,7 @@
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 public class App {
@@ -8,29 +9,19 @@ public class App {
 
         // API do JAVA que trabalha com single ou multithread
         // Lembrar que há duas threads: a principal e a do executor
-        ExecutorService executor = null;
+        // Neste caso serão utilizadas threads agendadas (3) para uma tarefa de 2
+        // segundos
+        ScheduledExecutorService executor = Executors.newScheduledThreadPool(3);
 
-        try {
-            executor = Executors.newCachedThreadPool();
-            Future<String> f1 = executor.submit(new Tarefa());
-            Future<String> f2 = executor.submit(new Tarefa());
-            Future<String> f3 = executor.submit(new Tarefa());
+        // executor.schedule(new Tarefa(), 2, TimeUnit.SECONDS);
+        executor.scheduleAtFixedRate(new Tarefa(), 0, 2, TimeUnit.SECONDS); // Executa a tarefa instantaneamente(0) em
+                                                                            // um período de 2 segundos
+        executor.scheduleWithFixedDelay(new Tarefa(), 0, 2, TimeUnit.SECONDS); // Executa as tarefas com um delay entre
+                                                                               // a finalização de uma e começo de outra
+                                                                               // de 2 segundos
 
-            System.out.println(f1.get()); // espera a tarefa finalizar
-            System.out.println(f2.get()); // espera a tarefa finalizar
-            System.out.println(f3.get()); // espera a tarefa finalizar
-
-            executor.shutdown(); // Finaliza o executor
-
-            System.out.println(f1.isDone());
-
-        } catch (Exception e) {
-            throw e;
-        } finally {
-            if (executor != null) {
-                executor.shutdownNow(); // finaliza o executor de forma agressiva
-            }
-        }
+        // PARA FUNCIONAR DEVE-SE COMENTAR O SHUTDOWN!!!
+        executor.shutdown(); // Finaliza o executor
     }
 
     // O try catch é usado para ter certeza que o executor vai ser finalizado
