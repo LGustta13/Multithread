@@ -1,57 +1,88 @@
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import java.util.Random;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.TimeUnit;
+
+// Dedlock, race condition
 
 public class App {
 
-    private static final Semaphore SEMAFORO1 = new Semaphore(10);
-    private static final Semaphore SEMAFORO2 = new Semaphore(3);
+    private static final List<Integer> LISTA = new ArrayList<>(5);
+    private static boolean produzindo = true;
+    private static boolean consumindo = true;
 
     public static void main(String[] args) throws Exception {
-        ExecutorService executor = Executors.newCachedThreadPool();
 
-        Runnable r1 = () -> {
+        Thread produtor = new Thread(() -> {
+            while (true) {
+                try {
+                    processamento();
 
-            try {
-                SEMAFORO1.acquire();
-                System.out.println(new Random().nextInt(10000) + ", " + Thread.currentThread().getName());
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            } finally {
-                SEMAFORO1.release();
-            }
-        };
+                    if (produzindo) {
+                        System.out.println("Produzindo");
+                        int numero = new Random().nextInt(10000);
+                        LISTA.add(numero);
 
-        Runnable r2 = () -> {
+                        if (LISTA.size() == 5) {
+                            System.out.println("Pausa produtor");
+                            produzindo = false;
+                        }
 
-            try {
-                boolean conseguiu = false;
-                while (!conseguiu) {
-                    conseguiu = SEMAFORO2.tryAcquire(1, TimeUnit.SECONDS);
+                        if (LISTA.size() == 1) {
+                            System.out.println("inicia consumidor");
+                            consumindo = true;
+                        }
+                    } else {
+                        System.out.println("??? Produtor dormindo");
+                    }
+
+                } catch (Exception e) {
+                    System.out.println(e.getMessage());
                 }
-                System.out.println(new Random().nextInt(10000) + ", " + Thread.currentThread().getName());
-                Thread.sleep(2500);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                e.printStackTrace();
-            } finally {
-                SEMAFORO2.release();
+
             }
-        };
+        });
 
-        for (int i = 0; i < 500; i++) {
-            // executor.execute(r1);
-            executor.execute(r2);
+        Thread consumidor = new Thread(() -> {
+            while (true) {
+                try {
+                    processamento();
 
-        }
+                    if (consumindo) {
+                        System.out.println("Consumindo");
+                        Optional<Integer> numero = LISTA.stream().findFirst();
+                        numero.ifPresent(n -> {
+                            LISTA.remove(n);
+                        });
 
-        executor.shutdown();
+                        if (LISTA.size() == 0) {
+                            System.out.println("Pausa consumidor");
+                            consumindo = false; // pausa consumidor
+                        }
 
+                        if (LISTA.size() == 4) {
+                            System.out.println("Inicia produtor");
+                            produzindo = true; // inicia produtor
+                        }
+                    } else {
+                        System.out.println("??? Consumidor dormindo");
+                    }
+                } catch (Exception e) {
+                    System.out.println(e.getMessage());
+                }
+            }
+        });
+
+        produtor.start();
+        consumidor.start();
     }
 
-    // O try catch é usado para ter certeza que o executor vai ser finalizado
+    private static final void processamento() {
+        int tempo = new Random().nextInt(40);
+        try {
+            Thread.sleep(tempo);
+        } catch (Exception e) {
+            Thread.currentThread().interrupt();
+        }
+    }
 }
